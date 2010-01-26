@@ -1,6 +1,6 @@
 #import ozf2
 import globalmaptiles,urllib,os,StringIO
-from ozf2 import OzfFile, Scale,OZF_TILE_WIDTH,OZF_TILE_HEIGHT
+from ozf2 import OzfFile, Scale
 from PIL import Image, ImageDraw, ImageFont
 
 font = ImageFont.truetype("/usr/share/fonts/truetype/freefont/FreeSans.ttf", 20)
@@ -124,7 +124,9 @@ TILE_HEIGHT = 256
 
 ozi_ce_hack = True
 
-
+OZF_TILE_WIDTH = 64 # You can set it even to 256 in OziExCE
+OZF_TILE_HEIGHT = OZF_TILE_WIDTH
+factor = TILE_WIDTH / OZF_TILE_WIDTH
 
 #compute tiles coordinates for higher zoom levels
 
@@ -167,7 +169,7 @@ for z in xrange(zoom_end,zoom-1,-1):
             height = int(height  / 0.20)
             
             
-        ozf_file = OzfFile(fname, width,height,  zoom_end - zoom + 1  )
+        ozf_file = OzfFile(fname, width,height,  zoom_end - zoom + 1  ,OZF_TILE_WIDTH)
     
     scale = Scale(ozf_file, (nx - sx + 1) * TILE_WIDTH  , (sy-ny+1) * TILE_HEIGHT)
     print scale.tiles_number
@@ -182,8 +184,10 @@ for z in xrange(zoom_end,zoom-1,-1):
     for y in xrange(ny,sy+1,1):
  #   for x in xrange(sx,nx+1):
         #~ print "x",x
-        cached_tiles =   [ [None,] * scale.xtiles, [None,] * scale.xtiles, [None,] * scale.xtiles,[None,] * scale.xtiles]
-        
+        cached_tiles = []
+        for i in xrange(factor):
+            cached_tiles.append( [None,] * scale.xtiles )
+            
 #        for y in xrange(sy,ny-1,-1):
         for x in xrange(sx,nx+1):
             #~ print "y",y
@@ -217,8 +221,8 @@ for z in xrange(zoom_end,zoom-1,-1):
             
             # the idea is to write ozf tiles at the end of one foreign tiles line, 
             # i.e. we have to cache xtiles * 256 / 64 = 4*xtiles tiles 
-            for i in xrange(4):
-                for j in xrange(4):
+            for i in xrange(factor):
+                for j in xrange(factor):
                     box = (   i * OZF_TILE_WIDTH, j*OZF_TILE_HEIGHT, (i +1) * OZF_TILE_WIDTH,(j+1)*OZF_TILE_HEIGHT)
                     data = im.crop(box).transpose(Image.FLIP_TOP_BOTTOM).tostring()
                     
@@ -226,19 +230,17 @@ for z in xrange(zoom_end,zoom-1,-1):
                     #~ data = "%d,%d: %d, %d"%(x,y,i,j)
                     #~ print i
                     
-                    cached_tiles[j][(x-sx)*4+i] =    data   
+                    cached_tiles[j][(x-sx)*factor+i] =    data   
                     #~ print i, data
                     
-        for i in xrange(4):
+        for i in xrange(factor):
             #~ print i,cached_tiles[i]
             for data in cached_tiles[i]:
                 #~ print i, datae
                 scale.write_tile(data)
                 tiles+=1
                 
-            
             # test
-            
             
     scale.set_palette(palette)
     scale.write()
@@ -253,18 +255,9 @@ open("gmap.map","w").write(  map_from_ozf(ozf_file, SW[0], NE[0], SW[1], NE[1] )
 
 
             #im = im.convert('RGB').convert('P', palette=Image.ADAPTIVE,colors=256)
-            
-
-            
-            
-            
+                        
             #pass
         
-
-
-
-
-
 #~ #google tiles
 #~ NE_x, NE_y = mercator.GoogleTile(NE_t[0],NE_t[1],zoom)
 #~ SW_x, SW_y = mercator.GoogleTile(SW_t[0],SW_t[1],zoom)

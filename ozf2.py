@@ -1,7 +1,5 @@
 import struct, zlib,math
 
-OZF_TILE_WIDTH  =   64
-OZF_TILE_HEIGHT =   64
 
 
 from PIL import Image
@@ -10,12 +8,14 @@ class Scale:
     def __init__(self, ozf_file, width, height):
         self.width = width
         self.height = height
-        self.xtiles = int(math.ceil(width*1.0 / OZF_TILE_WIDTH ))
-        self.ytiles = int(math.ceil(height *1.0/ OZF_TILE_HEIGHT ))
+
+        self.ozf_file = ozf_file
+
+        self.xtiles = int(math.ceil(width*1.0 / self.ozf_file.tile_width ))
+        self.ytiles = int(math.ceil(height *1.0/ self.ozf_file.tile_width ))
 
         self.palette = []
         
-        self.ozf_file = ozf_file
         self.tiles_number = (self.xtiles ) * (self.ytiles )  + 1
 
         self.tiles_addr_table = []# 0,]*self.tiles_number
@@ -72,7 +72,8 @@ class Scale:
 
 
 class OzfFile:    
-    def __init__(self, fname,width, height,scales_number):
+    def __init__(self, fname,width, height,scales_number, tile_width = 64):
+        self.tile_width = tile_width
         self.fname = fname
         self.fd = open(fname,"wb")
         self.width = width
@@ -86,7 +87,7 @@ class OzfFile:
         out = ""
 
         magic = 30584
-        dummy1, dummy2, dummy3, dummy4,dummy5,dummy6,dummy7,dummy8,dummy9,dummy10 = 0,65600,1078,40,0,0,0,256,2004318071,2004318071
+        dummy1, dummy2, dummy3, dummy4,dummy5,dummy6,dummy7,dummy8,dummy9,dummy10 = 0,1,1078,40,0,0,0,256,2004318071,2004318071
         version = 256
         
         memsiz = 1048576
@@ -97,7 +98,15 @@ class OzfFile:
         scales_addr_table = []
 
         self.fd.write( struct.pack("h", magic) )
-        self.fd.write( struct.pack("llll", dummy1, dummy2, dummy3, dummy4,) )
+
+
+        self.fd.write( struct.pack("l", dummy1) )
+
+        self.fd.write( struct.pack("h", self.tile_width) )
+        self.fd.write( struct.pack("h", dummy2) )
+        
+        
+        self.fd.write( struct.pack("ll", dummy3, dummy4,) )
 
         self.fd.write( struct.pack("l", self.width) )
         self.fd.write( struct.pack("l", self.height) )
@@ -132,7 +141,7 @@ class OzfFile:
             #print size*1.0/self.width*self.height
             for i in xrange(sc.xtiles):
                 for j in xrange(sc.ytiles):
-                    sc.write_tile("S"*64*64)
+                    sc.write_tile("S"*self.tile_width*self.tile_width )
             sc.set_palette( (0,)*256*3)
             sc.write()
         
@@ -182,7 +191,7 @@ if __name__ == '__main__':
 
         for i in xrange( scale.xtiles):
             for j in xrange( scale.ytiles):
-                box = (   i * OZF_TILE_WIDTH, j*OZF_TILE_HEIGHT, (i +1) * OZF_TILE_WIDTH,(j+1)*OZF_TILE_HEIGHT)
+                box = (   i * self.tile_width, j*self.tile_width, (i +1) * self.tile_width,(j+1)*self.tile_width)
                 img = im.crop(box).transpose(Image.FLIP_TOP_BOTTOM)
                 data = img.tostring()
                 
