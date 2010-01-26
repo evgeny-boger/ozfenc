@@ -69,7 +69,7 @@ SW = (39.89907,116.368046)
 NE = (39.935539,116.423492)
 
 
-fname = "test.ozf2"
+fname = "test2.ozf2"
 
 TILE_WIDTH = 256
 TILE_HEIGHT = 256
@@ -82,7 +82,7 @@ ozf_file = OzfFile(fname, 8000,8000 , len(zoom_levels))
 
 for zoom in zoom_levels:
     scale = Scale(ozf_file, int(ozf_file.width*zoom), int(ozf_file.height*zoom))
-    im = Image.new("P", (64,64))
+    im = Image.new("P", (OZF_TILE_WIDTH,OZF_TILE_WIDTH))
     ImageDraw.Draw(im).text((0,0),str(zoom) ,font = font, fill = 255)
     data = im.transpose(Image.FLIP_TOP_BOTTOM).tostring()
     
@@ -95,4 +95,4 @@ for zoom in zoom_levels:
     scale.write()
     
 ozf_file.finalize()
-open("test.map","w").write(  map_from_ozf(ozf_file, SW[0], NE[0], SW[1], NE[1] ))
+open("test2.map","w").write(  map_from_ozf(ozf_file, SW[0], NE[0], SW[1], NE[1] ))
